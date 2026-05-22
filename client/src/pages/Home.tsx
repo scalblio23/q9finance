@@ -66,12 +66,12 @@ const AI_STEPS = [
 ];
 
 const RATE_MESSAGES: Record<string, { style: "success" | "caution"; emoji: string; headline: string; body: string }> = {
-  "Under 5%":    { style: "caution", emoji: "🤔", headline: "We may be able to help",         body: "Your rate is already quite competitive, but there may still be savings or better features available. We've prepared a report — book a 10-minute call to review it." },
-  "5% – 5.5%":  { style: "success", emoji: "👀", headline: "There could be room to move",    body: "Rates in your range have been shifting. There's a good chance we can find you something sharper. Your report is ready — book in a 10-minute call to lock in your results." },
-  "5.5% – 6%":  { style: "success", emoji: "💡", headline: "Good news — we can likely do better", body: "At 5.5–6%, you're paying more than you need to. We've identified lenders who could do better. Your report is ready — book a 10-minute call to find out how much." },
-  "6% – 6.5%":  { style: "success", emoji: "🎯", headline: "Your report is ready!",           body: "A rate of 6–6.5% is above what most lenders are offering right now. We've found better options for you. Book a 10-minute call to review your personalised results." },
-  "6.5% – 7%":  { style: "success", emoji: "🔥", headline: "Big savings on the table",        body: "At 6.5–7%, you're significantly above market rates. Your report shows multiple lenders who can do better. Book a 10-minute call — the savings could be substantial." },
-  "Over 7%":    { style: "success", emoji: "🚨", headline: "You're paying way too much",       body: "Over 7% is well above what's available in today's market. Your report is ready with lenders who can cut your repayments meaningfully. Book a 10-minute call now." },
+  "Under 5%":    { style: "success", emoji: "✅", headline: "You're a strong candidate",        body: "Based on what you've shared, you look like a great fit for an SMSF loan. Book a free 10-minute call with one of our specialists to walk through your options and what's possible." },
+  "5% – 5.5%":  { style: "success", emoji: "👍", headline: "Looking good",                     body: "You've answered everything we need to get the conversation started. Book a free 10-minute call with one of our SMSF specialists — they'll talk you through the next steps." },
+  "5.5% – 6%":  { style: "success", emoji: "💡", headline: "You're ready to chat",             body: "Thanks for sharing your details. The next step is a quick call with one of our SMSF loan specialists — book a free 10 minutes below and we'll take it from there." },
+  "6% – 6.5%":  { style: "success", emoji: "🎯", headline: "Let's get you sorted",             body: "Everything we need to start the conversation is in. Pick a time that suits — one of our SMSF specialists will call to walk through your situation and what's possible." },
+  "6.5% – 7%":  { style: "success", emoji: "🚀", headline: "Ready when you are",               body: "We've got what we need to start. Book a free 10-minute call below and one of our SMSF loan specialists will talk you through your options." },
+  "Over 7%":    { style: "success", emoji: "🔥", headline: "Let's move quickly",               body: "Given your timeline, the fastest next step is a call. Book a free 10-minute slot below and one of our SMSF specialists will get you on track." },
 };
 
 const TOTAL_STEPS = 5;
