@@ -6,7 +6,7 @@
  * Flow: Intro → Name → Bank → Loan → Interest → Timeline → Contact → Analysing (AI) → Report Ready → Book Call
  */
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { trackSurveyStep, trackLead, trackBooking } from "@/lib/pixel";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -77,15 +77,27 @@ const RATE_MESSAGES: Record<string, { style: "success" | "caution"; emoji: strin
 const TOTAL_STEPS = 5;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-function getNext7BusinessDays(): Date[] {
+// Walk forward from tomorrow until we've found `count` business days that aren't blocked.
+// Cap the search at MAX_LOOKAHEAD days so we don't loop forever if every day's blocked.
+function getNextAvailableBusinessDays(count: number, blockedSet: Set<string>): Date[] {
   const days: Date[] = [];
   const d = new Date();
   d.setHours(0, 0, 0, 0);
   d.setDate(d.getDate() + 1);
-  while (days.length < 7) {
+  const MAX_LOOKAHEAD = 60; // ~12 weeks; plenty of headroom
+  let walked = 0;
+  while (days.length < count && walked < MAX_LOOKAHEAD) {
     const dow = d.getDay();
-    if (dow !== 0 && dow !== 6) days.push(new Date(d));
+    if (dow !== 0 && dow !== 6) {
+      const dd = String(d.getDate()).padStart(2, "0");
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dayKey = `${d.getFullYear()}-${mm}-${dd}`;
+      if (!blockedSet.has(dayKey)) {
+        days.push(new Date(d));
+      }
+    }
     d.setDate(d.getDate() + 1);
+    walked++;
   }
   return days;
 }
@@ -799,8 +811,10 @@ function StepBooking({
     return blockedSet.has(slotKeyForDateHour(d, hour));
   };
 
-  const allBusinessDays = useRef(getNext7BusinessDays()).current;
-  const businessDays = allBusinessDays.filter(d => !isDateBlocked(d));
+  const businessDays = useMemo(
+    () => getNextAvailableBusinessDays(2, blockedSet),
+    [blockedSet]
+  );
   const [phoneTouched, setPhoneTouched] = useState(false);
   const [emailTouched, setEmailTouched] = useState(false);
   const phoneRaw = form.phone.trim().replace(/\s/g, '');
