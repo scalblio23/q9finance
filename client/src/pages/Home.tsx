@@ -94,6 +94,13 @@ function formatDate(d: Date): string {
   return d.toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" });
 }
 
+// Proper-case the user's first name: "henry" → "Henry", "HENRY" → "Henry", "henry smith" → "Henry"
+function capitalizeFirstName(fullName: string): string {
+  const first = fullName.trim().split(/\s+/)[0] ?? "";
+  if (!first) return "";
+  return first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
+}
+
 // ── Slide variants ────────────────────────────────────────────────────────────
 const slideVariants = {
   enter: (dir: number) => ({ x: dir > 0 ? 80 : -80, opacity: 0 }),
@@ -352,7 +359,7 @@ function AIAnalysingScreen({
   }, [reportData, onReportReady]);
 
   const msg = RATE_MESSAGES[interest] ?? RATE_MESSAGES["5.5% – 6%"];
-  const firstName = name.split(" ")[0];
+  const firstName = capitalizeFirstName(name);
   const isGenerating = !reportData || reportData.status === "generating" || reportData.status === "pending";
 
   return (
@@ -449,7 +456,7 @@ function ReportReadyScreen({
   interest: string;
   onBookCall: () => void;
 }) {
-  const firstName = name.split(" ")[0];
+  const firstName = capitalizeFirstName(name);
   const msg = RATE_MESSAGES[interest] ?? RATE_MESSAGES["5.5% – 6%"];
 
   return (
@@ -1115,7 +1122,7 @@ export default function Home() {
             You're all set!
           </h2>
           <p className="text-gray-500 text-sm leading-relaxed mb-6">
-            Thanks, <strong>{form.name}</strong>. We'll call you on{" "}
+            Thanks, <strong>{capitalizeFirstName(form.name)}</strong>. We'll call you on{" "}
             <strong>{form.phone}</strong>
             {form.bookingDate && (
               <> on <strong>{formatDate(form.bookingDate)}</strong> at <strong>{form.bookingTime}</strong></>
