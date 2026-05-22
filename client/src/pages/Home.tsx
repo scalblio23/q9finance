@@ -1150,6 +1150,17 @@ export default function Home() {
               </div>
             )}
           </div>
+
+          {/* Quick tip — helps the call go smoothly */}
+          <div className="mt-5 bg-amber-50 border border-amber-200 rounded-xl p-4 text-left flex gap-3">
+            <span className="text-xl flex-shrink-0">💡</span>
+            <div>
+              <p className="text-xs font-bold tracking-wide uppercase text-amber-800 mb-1">Quick tip</p>
+              <p className="text-xs text-amber-700 leading-relaxed">
+                Have your SMSF trust deed and most recent member balance handy if you can — it helps us give you accurate numbers on the call.
+              </p>
+            </div>
+          </div>
         </motion.div>
       </div>
     );
