@@ -9,7 +9,7 @@ import { trpc } from "@/lib/trpc";
 import {
   FileText, Phone, Mail, Calendar, Loader2,
   CheckCircle, User, AlertCircle, Search,
-  ChevronLeft, ChevronRight,
+  ChevronLeft, ChevronRight, ChevronDown, ChevronUp,
 } from "lucide-react";
 import type { Lead } from "../../../drizzle/schema";
 
@@ -90,10 +90,8 @@ function BookingCalendar({ leads }: { leads: Lead[] }) {
   // Collect all cells touched during a drag — sent as one batch on mouse-up
   const draggedCellsRef = useRef<string[]>([]);
 
-  // Collapse state for the Blocked Slots tags list — keeps the calendar usable
-  // when there are dozens of blocked slots.
+  // Collapsed by default — only the count is shown, click to expand the pills.
   const [blockedTagsExpanded, setBlockedTagsExpanded] = useState(false);
-  const BLOCKED_TAGS_LIMIT = 10;
 
   const slotKeyForCell = (d: Date, hour: number) => {
     const dd = String(d.getDate()).padStart(2, "0");
@@ -359,49 +357,44 @@ function BookingCalendar({ leads }: { leads: Lead[] }) {
       {/* Blocked slots tags */}
       {blockedList.length > 0 && (
         <div className="px-5 py-4 border-t border-gray-100">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Blocked Slots ({blockedList.length})</span>
-            <button
-              onClick={() => clearAllMutation.mutate()}
-              className="text-xs text-rose-400 hover:text-rose-600 font-semibold transition-colors"
-            >
-              Clear all
-            </button>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {(blockedTagsExpanded ? blockedList : blockedList.slice(0, BLOCKED_TAGS_LIMIT)).map(key => (
-              <span
-                key={key}
-                className="inline-flex items-center gap-1.5 bg-rose-50 border border-rose-200 text-rose-600 text-xs font-medium rounded-full px-3 py-1"
-              >
-                {formatSlotKeyLabel(key)}
-                <button
-                  onClick={() => toggleSlotMutation.mutate({ slotKey: key, isWholeDay: key.split("-").length === 3 })}
-                  className="text-rose-400 hover:text-rose-700 transition-colors ml-0.5"
-                  title="Unblock"
-                >
-                  ×
-                </button>
-              </span>
-            ))}
-          </div>
-          {blockedList.length > BLOCKED_TAGS_LIMIT && (
+          {/* Collapsed header — click to toggle. Only the count is shown by default. */}
+          <button
+            onClick={() => setBlockedTagsExpanded(v => !v)}
+            className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wide hover:text-[#0D5C55] transition-colors"
+          >
+            <span>Blocked Slots ({blockedList.length})</span>
+            {blockedTagsExpanded
+              ? <ChevronUp className="w-3.5 h-3.5" />
+              : <ChevronDown className="w-3.5 h-3.5" />}
+          </button>
+
+          {blockedTagsExpanded && (
             <div className="mt-3">
-              {!blockedTagsExpanded ? (
+              <div className="flex items-center justify-end mb-2">
                 <button
-                  onClick={() => setBlockedTagsExpanded(true)}
-                  className="text-xs text-gray-500 hover:text-[#0D5C55] font-semibold transition-colors"
+                  onClick={() => clearAllMutation.mutate()}
+                  className="text-xs text-rose-400 hover:text-rose-600 font-semibold transition-colors"
                 >
-                  Show {blockedList.length - BLOCKED_TAGS_LIMIT} more
+                  Clear all
                 </button>
-              ) : (
-                <button
-                  onClick={() => setBlockedTagsExpanded(false)}
-                  className="text-xs text-gray-400 hover:text-[#0D5C55] font-semibold transition-colors"
-                >
-                  Collapse
-                </button>
-              )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {blockedList.map(key => (
+                  <span
+                    key={key}
+                    className="inline-flex items-center gap-1.5 bg-rose-50 border border-rose-200 text-rose-600 text-xs font-medium rounded-full px-3 py-1"
+                  >
+                    {formatSlotKeyLabel(key)}
+                    <button
+                      onClick={() => toggleSlotMutation.mutate({ slotKey: key, isWholeDay: key.split("-").length === 3 })}
+                      className="text-rose-400 hover:text-rose-700 transition-colors ml-0.5"
+                      title="Unblock"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
             </div>
           )}
         </div>
