@@ -90,6 +90,11 @@ function BookingCalendar({ leads }: { leads: Lead[] }) {
   // Collect all cells touched during a drag — sent as one batch on mouse-up
   const draggedCellsRef = useRef<string[]>([]);
 
+  // Collapse state for the Blocked Slots tags list — keeps the calendar usable
+  // when there are dozens of blocked slots.
+  const [blockedTagsExpanded, setBlockedTagsExpanded] = useState(false);
+  const BLOCKED_TAGS_LIMIT = 10;
+
   const slotKeyForCell = (d: Date, hour: number) => {
     const dd = String(d.getDate()).padStart(2, "0");
     const mm = String(d.getMonth() + 1).padStart(2, "0");
@@ -364,7 +369,7 @@ function BookingCalendar({ leads }: { leads: Lead[] }) {
             </button>
           </div>
           <div className="flex flex-wrap gap-2">
-            {blockedList.map(key => (
+            {(blockedTagsExpanded ? blockedList : blockedList.slice(0, BLOCKED_TAGS_LIMIT)).map(key => (
               <span
                 key={key}
                 className="inline-flex items-center gap-1.5 bg-rose-50 border border-rose-200 text-rose-600 text-xs font-medium rounded-full px-3 py-1"
@@ -380,6 +385,25 @@ function BookingCalendar({ leads }: { leads: Lead[] }) {
               </span>
             ))}
           </div>
+          {blockedList.length > BLOCKED_TAGS_LIMIT && (
+            <div className="mt-3">
+              {!blockedTagsExpanded ? (
+                <button
+                  onClick={() => setBlockedTagsExpanded(true)}
+                  className="text-xs text-gray-500 hover:text-[#0D5C55] font-semibold transition-colors"
+                >
+                  Show {blockedList.length - BLOCKED_TAGS_LIMIT} more
+                </button>
+              ) : (
+                <button
+                  onClick={() => setBlockedTagsExpanded(false)}
+                  className="text-xs text-gray-400 hover:text-[#0D5C55] font-semibold transition-colors"
+                >
+                  Collapse
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
