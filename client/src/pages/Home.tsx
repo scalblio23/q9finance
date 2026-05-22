@@ -436,15 +436,6 @@ function AIAnalysingScreen({
           </p>
         </motion.div>
       )}
-
-      {/* Failed state */}
-      {reportData?.status === "failed" && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-          className="flex items-center gap-2 mt-4 text-sm text-red-500 bg-red-50 rounded-xl px-4 py-3 w-full">
-          <AlertCircle className="w-4 h-4 flex-shrink-0" />
-          <span>Report generation encountered an issue. Please continue to book your call.</span>
-        </motion.div>
-      )}
     </div>
   );
 }
