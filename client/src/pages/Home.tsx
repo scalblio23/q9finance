@@ -101,6 +101,108 @@ function capitalizeFirstName(fullName: string): string {
   return first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
 }
 
+// ── Calendar helpers ──────────────────────────────────────────────────────────
+// All booking slots are defined in AEST. Each helper below converts that to a
+// platform-appropriate format so users can add the event regardless of which
+// calendar app they use.
+const AEST_OFFSET_HOURS = 10;
+const CAL_EVENT_TITLE = "SMSF loan call with Q9 Finance";
+
+function buildCalEventTimes(date: Date, slot: string): { startUtc: Date; endUtc: Date } {
+  const parseSlotStartAEST = (s: string): { hour: number; minute: number } => {
+    const start = s.split("–")[0].trim();
+    const m = start.match(/^(\d+):(\d+)\s*(AM|PM)$/i);
+    if (!m) return { hour: 9, minute: 0 };
+    let h = parseInt(m[1], 10);
+    const min = parseInt(m[2], 10);
+    const ampm = m[3].toUpperCase();
+    if (ampm === "PM" && h !== 12) h += 12;
+    if (ampm === "AM" && h === 12) h = 0;
+    return { hour: h, minute: min };
+  };
+  const { hour: hAEST, minute } = parseSlotStartAEST(slot);
+  const startUtc = new Date(Date.UTC(
+    date.getFullYear(), date.getMonth(), date.getDate(),
+    hAEST - AEST_OFFSET_HOURS, minute, 0,
+  ));
+  const endUtc = new Date(startUtc.getTime() + 30 * 60 * 1000);
+  return { startUtc, endUtc };
+}
+
+function formatCalUtcStamp(d: Date): string {
+  return (
+    d.getUTCFullYear().toString().padStart(4, "0") +
+    String(d.getUTCMonth() + 1).padStart(2, "0") +
+    String(d.getUTCDate()).padStart(2, "0") +
+    "T" +
+    String(d.getUTCHours()).padStart(2, "0") +
+    String(d.getUTCMinutes()).padStart(2, "0") +
+    String(d.getUTCSeconds()).padStart(2, "0") +
+    "Z"
+  );
+}
+
+function buildCalDescription(name: string, phone: string): string {
+  return `A specialist from Q9 Finance will call ${name} on ${phone} to walk through your SMSF loan options.\n\nTip: have your SMSF trust deed and most recent member balance handy if you can — it helps us give you accurate numbers on the call.`;
+}
+
+// ICS file — Apple Calendar, Outlook desktop, generic fallback
+function buildIcsFile(args: { date: Date; slot: string; name: string; phone: string }): string {
+  const { startUtc, endUtc } = buildCalEventTimes(args.date, args.slot);
+  const esc = (s: string): string =>
+    s.replace(/\\/g, "\\\\").replace(/,/g, "\\,").replace(/;/g, "\\;").replace(/\n/g, "\\n");
+  const uid = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}@q9finance`;
+  const lines = [
+    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Q9 Finance//SMSF Loan Call//EN",
+    "CALSCALE:GREGORIAN", "METHOD:PUBLISH", "BEGIN:VEVENT",
+    `UID:${uid}`,
+    `DTSTAMP:${formatCalUtcStamp(new Date())}`,
+    `DTSTART:${formatCalUtcStamp(startUtc)}`,
+    `DTEND:${formatCalUtcStamp(endUtc)}`,
+    `SUMMARY:${esc(CAL_EVENT_TITLE)}`,
+    `DESCRIPTION:${esc(buildCalDescription(args.name, args.phone))}`,
+    "BEGIN:VALARM", "TRIGGER:-PT15M", "ACTION:DISPLAY",
+    `DESCRIPTION:${esc("SMSF loan call in 15 minutes")}`,
+    "END:VALARM", "END:VEVENT", "END:VCALENDAR",
+  ];
+  return lines.join("\r\n");
+}
+
+function downloadIcsFile(content: string, filename: string): void {
+  const blob = new Blob([content], { type: "text/calendar;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// Google Calendar — opens pre-filled compose tab
+function buildGoogleCalendarUrl(args: { date: Date; slot: string; name: string; phone: string }): string {
+  const { startUtc, endUtc } = buildCalEventTimes(args.date, args.slot);
+  const params = new URLSearchParams({
+    action: "TEMPLATE",
+    text: CAL_EVENT_TITLE,
+    dates: `${formatCalUtcStamp(startUtc)}/${formatCalUtcStamp(endUtc)}`,
+    details: buildCalDescription(args.name, args.phone),
+  });
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+}
+
+// Outlook — opens pre-filled compose page
+function buildOutlookCalendarUrl(args: { date: Date; slot: string; name: string; phone: string }): string {
+  const { startUtc, endUtc } = buildCalEventTimes(args.date, args.slot);
+  const params = new URLSearchParams({
+    path: "/calendar/action/compose",
+    rru: "addevent",
+    subject: CAL_EVENT_TITLE,
+    startdt: startUtc.toISOString().replace(/\.\d{3}Z$/, "Z"),
+    enddt: endUtc.toISOString().replace(/\.\d{3}Z$/, "Z"),
+    body: buildCalDescription(args.name, args.phone),
+  });
+  return `https://outlook.live.com/calendar/0/deeplink/compose?${params.toString()}`;
+}
+
 // ── Slide variants ────────────────────────────────────────────────────────────
 const slideVariants = {
   enter: (dir: number) => ({ x: dir > 0 ? 80 : -80, opacity: 0 }),
@@ -1161,6 +1263,50 @@ export default function Home() {
               </p>
             </div>
           </div>
+
+          {/* Calendar buttons — only when a date+time is booked */}
+          {form.bookingDate && form.bookingTime && (
+            <div className="mt-5">
+              <p className="text-xs font-semibold tracking-wide uppercase text-gray-400 text-center mb-3">Add to your calendar</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <a
+                  href={buildGoogleCalendarUrl({
+                    date: form.bookingDate, slot: form.bookingTime, name: form.name, phone: form.phone,
+                  })}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border border-gray-200 bg-white text-xs font-semibold text-gray-700 hover:border-[#0D9E8F] hover:text-[#0D5C55] transition-colors"
+                >
+                  <Calendar className="w-3.5 h-3.5" />
+                  Google
+                </a>
+                <a
+                  href={buildOutlookCalendarUrl({
+                    date: form.bookingDate, slot: form.bookingTime, name: form.name, phone: form.phone,
+                  })}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border border-gray-200 bg-white text-xs font-semibold text-gray-700 hover:border-[#0D9E8F] hover:text-[#0D5C55] transition-colors"
+                >
+                  <Calendar className="w-3.5 h-3.5" />
+                  Outlook
+                </a>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const ics = buildIcsFile({
+                      date: form.bookingDate!, slot: form.bookingTime, name: form.name, phone: form.phone,
+                    });
+                    downloadIcsFile(ics, "q9-finance-smsf-call.ics");
+                  }}
+                  className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border border-gray-200 bg-white text-xs font-semibold text-gray-700 hover:border-[#0D9E8F] hover:text-[#0D5C55] transition-colors"
+                >
+                  <Calendar className="w-3.5 h-3.5" />
+                  Apple / iCal
+                </button>
+              </div>
+            </div>
+          )}
         </motion.div>
       </div>
     );
