@@ -8,7 +8,7 @@ import { motion } from "framer-motion";
 import { trpc } from "@/lib/trpc";
 import {
   FileText, Phone, Mail, Calendar, Loader2,
-  CheckCircle, User,
+  CheckCircle, User, AlertCircle,
   ChevronLeft, ChevronRight,
 } from "lucide-react";
 import type { Lead } from "../../../drizzle/schema";
@@ -322,19 +322,24 @@ function BookingCalendar({ leads }: { leads: Lead[] }) {
                         }`}
                         title={isBlocked ? "Click to unblock" : "Click to block"}
                       >
-                        {isSlotBlocked && !isDayBl && (
+                        {isSlotBlocked && !isDayBl && events.length === 0 && (
                           <div className="flex items-center justify-center h-full min-h-[44px]">
                             <span className="text-rose-300 text-lg select-none">⊘</span>
                           </div>
                         )}
-                        {!isBlocked && events.map((ev, ei) => (
+                        {events.map((ev, ei) => (
                           <div
                             key={ei}
-                            className="bg-[#0D5C55] text-white text-xs font-semibold rounded px-1.5 py-1 mb-0.5 truncate cursor-default"
-                            title={`${ev.name} · ${ev.bookingTime}`}
+                            className={`bg-[#0D5C55] text-white text-xs font-semibold rounded px-1.5 py-1 mb-0.5 truncate cursor-default flex items-center gap-1 ${
+                              isBlocked ? "ring-2 ring-red-500" : ""
+                            }`}
+                            title={isBlocked
+                              ? `⚠ Conflict — ${ev.name} is booked in a blocked slot · ${ev.bookingTime}`
+                              : `${ev.name} · ${ev.bookingTime}`}
                             onMouseDown={e => e.stopPropagation()}
                           >
-                            {ev.name}
+                            {isBlocked && <AlertCircle className="w-3 h-3 text-red-200 flex-shrink-0" />}
+                            <span className="truncate">{ev.name}</span>
                           </div>
                         ))}
                       </div>
