@@ -8,7 +8,7 @@ import { motion } from "framer-motion";
 import { trpc } from "@/lib/trpc";
 import {
   FileText, Phone, Mail, Calendar, Loader2,
-  CheckCircle, User, AlertCircle,
+  CheckCircle, User, AlertCircle, Search,
   ChevronLeft, ChevronRight,
 } from "lucide-react";
 import type { Lead } from "../../../drizzle/schema";
@@ -480,9 +480,101 @@ function LeadCard({ lead }: { lead: Lead }) {
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function BrokerAdmin() {
   const { data: leads, isLoading, error } = trpc.survey.getAllLeads.useQuery();
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<"all" | "today" | "week" | "upcoming" | "past">("all");
+  const [expanded, setExpanded] = useState(false);
 
-  const bookedLeads = leads?.filter(l => !!l.bookingDate) ?? [];
-  const unbookedLeads = leads?.filter(l => !l.bookingDate) ?? [];
+  // Reset to collapsed whenever the user changes filter or search — feels more predictable
+  // than persisting a long expanded list across context switches.
+  const onFilterChange = (next: typeof filter) => { setFilter(next); setExpanded(false); };
+  const onSearchChange = (next: string) => { setSearch(next); setExpanded(false); };
+
+  // Parse a lead's bookingDate ("Wed, 7 May") to a YYYY-MM-DD string we can compare to today.
+  // Uses current year since the stored string has no year component.
+  const parseBookingDateKey = (lead: Lead): string | null => {
+    if (!lead.bookingDate) return null;
+    try {
+      const withYear = `${lead.bookingDate} ${new Date().getFullYear()}`;
+      const d = new Date(withYear);
+      if (isNaN(d.getTime())) return null;
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd}`;
+    } catch { return null; }
+  };
+
+  // Today and end-of-week (Sunday) as YYYY-MM-DD for chip comparisons.
+  const todayKey = (() => {
+    const t = new Date();
+    return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
+  })();
+  const endOfWeekKey = (() => {
+    const t = new Date();
+    const dayOfWeek = t.getDay(); // 0=Sun
+    const daysUntilSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
+    const end = new Date(t);
+    end.setDate(t.getDate() + daysUntilSunday);
+    return `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, "0")}-${String(end.getDate()).padStart(2, "0")}`;
+  })();
+
+  // Sort newest first, then apply search + filter.
+  const sortedLeads = useMemo(() => {
+    if (!leads) return [];
+    return [...leads].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [leads]);
+
+  // Counts per filter — computed against the searched set so chip numbers stay in sync
+  // with what the user is actually looking at.
+  const searchedLeads = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return sortedLeads;
+    return sortedLeads.filter(l => {
+      return (
+        (l.name ?? "").toLowerCase().includes(q) ||
+        (l.email ?? "").toLowerCase().includes(q) ||
+        (l.phone ?? "").toLowerCase().includes(q)
+      );
+    });
+  }, [sortedLeads, search]);
+
+  const filterCounts = useMemo(() => {
+    const counts = { all: searchedLeads.length, today: 0, week: 0, upcoming: 0, past: 0 };
+    for (const lead of searchedLeads) {
+      const key = parseBookingDateKey(lead);
+      if (!key) continue;
+      if (key === todayKey) counts.today++;
+      if (key >= todayKey && key <= endOfWeekKey) counts.week++;
+      if (key > todayKey) counts.upcoming++;
+      if (key < todayKey) counts.past++;
+    }
+    return counts;
+  }, [searchedLeads, todayKey, endOfWeekKey]);
+
+  const visibleLeads = useMemo(() => {
+    return searchedLeads.filter(lead => {
+      if (filter === "all") return true;
+      const key = parseBookingDateKey(lead);
+      if (!key) return false;
+      if (filter === "today") return key === todayKey;
+      if (filter === "week") return key >= todayKey && key <= endOfWeekKey;
+      if (filter === "upcoming") return key > todayKey;
+      if (filter === "past") return key < todayKey;
+      return true;
+    });
+  }, [searchedLeads, filter, todayKey, endOfWeekKey]);
+
+  const COLLAPSE_LIMIT = 15;
+  const shownLeads = expanded ? visibleLeads : visibleLeads.slice(0, COLLAPSE_LIMIT);
+  const hiddenCount = visibleLeads.length - shownLeads.length;
+
+  const filterChips: { id: typeof filter; label: string; count: number }[] = [
+    { id: "all",      label: "All",       count: filterCounts.all },
+    { id: "today",    label: "Today",     count: filterCounts.today },
+    { id: "week",     label: "This week", count: filterCounts.week },
+    { id: "upcoming", label: "Upcoming",  count: filterCounts.upcoming },
+    { id: "past",     label: "Past",      count: filterCounts.past },
+  ];
 
   return (
     <div className="min-h-screen bg-[#F0F0EE]">
@@ -513,19 +605,8 @@ export default function BrokerAdmin() {
               All Leads
             </h1>
             <p className="text-sm text-gray-400 mt-0.5">
-              {leads?.length ?? 0} total · {bookedLeads.length} booked
+              {leads?.length ?? 0} total
             </p>
-          </div>
-
-          <div className="flex items-center gap-3 flex-wrap">
-            {leads && leads.length > 0 && (
-              <div className="flex gap-3 text-xs">
-                <span className="flex items-center gap-1 text-green-600 font-medium">
-                  <CheckCircle className="w-3.5 h-3.5" />
-                  {leads.length} ready
-                </span>
-              </div>
-            )}
           </div>
         </div>
 
@@ -543,7 +624,7 @@ export default function BrokerAdmin() {
           </div>
         )}
 
-        {/* Empty */}
+        {/* Empty — no leads at all */}
         {leads && leads.length === 0 && (
           <div className="text-center py-20">
             <FileText className="w-10 h-10 text-gray-200 mx-auto mb-3" />
@@ -556,37 +637,88 @@ export default function BrokerAdmin() {
           <BookingCalendar leads={leads} />
         )}
 
-        {/* Booked section */}
-        {bookedLeads.length > 0 && (
-          <div className="mb-8">
-            <p
-              className="text-xs font-bold tracking-widest uppercase text-[#0D9E8F] mb-3"
-              style={{ fontFamily: "'Barlow Condensed', sans-serif" }}
-            >
-              Booked ({bookedLeads.length})
-            </p>
-            <div className="space-y-3">
-              {bookedLeads.map(lead => (
-                <LeadCard key={lead.id} lead={lead} />
-              ))}
+        {/* Search + filter chips */}
+        {leads && leads.length > 0 && (
+          <div className="mb-6">
+            {/* Search */}
+            <div className="relative mb-3">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
+              <input
+                type="text"
+                placeholder="Search by name, email, or phone..."
+                value={search}
+                onChange={e => onSearchChange(e.target.value)}
+                className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200 bg-white text-sm text-gray-700 placeholder:text-gray-300 focus:outline-none focus:border-[#0D9E8F] transition-colors"
+              />
+            </div>
+
+            {/* Filter chips */}
+            <div className="flex flex-wrap gap-2">
+              {filterChips.map(chip => {
+                const isActive = filter === chip.id;
+                return (
+                  <button
+                    key={chip.id}
+                    onClick={() => onFilterChange(chip.id)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+                      isActive
+                        ? "bg-[#0D5C55] border-[#0D5C55] text-white"
+                        : "bg-white border-gray-200 text-gray-500 hover:border-gray-300"
+                    }`}
+                  >
+                    {chip.label}
+                    <span className={`ml-1.5 ${isActive ? "text-white/70" : "text-gray-300"}`}>
+                      {chip.count}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
 
-        {/* No Booking section */}
-        {unbookedLeads.length > 0 && (
-          <div>
-            <p
-              className="text-xs font-bold tracking-widest uppercase text-gray-400 mb-3"
-              style={{ fontFamily: "'Barlow Condensed', sans-serif" }}
+        {/* Leads list */}
+        {leads && leads.length > 0 && visibleLeads.length === 0 && (
+          <div className="text-center py-12 bg-white rounded-2xl border border-gray-100">
+            <Search className="w-8 h-8 text-gray-200 mx-auto mb-2" />
+            <p className="text-gray-400 text-sm">No leads match this filter or search.</p>
+            <button
+              onClick={() => { onSearchChange(""); onFilterChange("all"); }}
+              className="text-xs text-[#0D9E8F] hover:text-[#0D5C55] font-semibold mt-3 transition-colors"
             >
-              No Booking ({unbookedLeads.length})
-            </p>
+              Clear filters
+            </button>
+          </div>
+        )}
+
+        {visibleLeads.length > 0 && (
+          <div>
             <div className="space-y-3">
-              {unbookedLeads.map(lead => (
+              {shownLeads.map(lead => (
                 <LeadCard key={lead.id} lead={lead} />
               ))}
             </div>
+
+            {/* Show more / Collapse */}
+            {visibleLeads.length > COLLAPSE_LIMIT && (
+              <div className="text-center mt-5">
+                {!expanded ? (
+                  <button
+                    onClick={() => setExpanded(true)}
+                    className="px-5 py-2.5 rounded-xl border border-gray-200 bg-white text-sm font-semibold text-gray-600 hover:border-[#0D5C55] hover:text-[#0D5C55] transition-colors"
+                  >
+                    Show {hiddenCount} more lead{hiddenCount === 1 ? "" : "s"}
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setExpanded(false)}
+                    className="text-xs text-gray-400 hover:text-[#0D5C55] font-semibold transition-colors"
+                  >
+                    Collapse
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         )}
       </main>
