@@ -4,11 +4,11 @@
  */
 
 import { useState, useMemo, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { trpc } from "@/lib/trpc";
 import {
   FileText, Phone, Mail, Calendar, Loader2,
-  CheckCircle, Trash2, CheckSquare, Square, User,
+  CheckCircle, User,
   ChevronLeft, ChevronRight,
 } from "lucide-react";
 import type { Lead } from "../../../drizzle/schema";
@@ -382,227 +382,102 @@ function BookingCalendar({ leads }: { leads: Lead[] }) {
 }
 
 // ── Lead Card ────────────────────────────────────────────────────────────────
-function LeadCard({
-  lead,
-  selected,
-  onToggleSelect,
-  onDeleted,
-}: {
-  lead: Lead;
-  selected: boolean;
-  onToggleSelect: (id: number) => void;
-  onDeleted: (id: number) => void;
-}) {
-  const [confirmDelete, setConfirmDelete] = useState(false);
+function LeadCard({ lead }: { lead: Lead }) {
   const createdAt = new Date(lead.createdAt);
   const hasBooking = !!lead.bookingDate;
 
-  const deleteMutation = trpc.survey.deleteLead.useMutation({
-    onSuccess: () => onDeleted(lead.id),
-  });
-
   return (
-    <>
-      <motion.div
-        layout
-        className={`bg-white rounded-2xl overflow-hidden shadow-sm transition-all ${
-          selected ? "ring-2 ring-[#0D9E8F]/40" : "border border-gray-100"
-        }`}
-      >
-        {/* Dark teal booking header — only when booked */}
-        {hasBooking && (
-          <div className="bg-[#0D5C55] px-4 py-2.5 flex items-center gap-2">
-            <Calendar className="w-3.5 h-3.5 text-white/70 flex-shrink-0" />
-            <span
-              className="text-white text-sm font-semibold"
-              style={{ fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.02em" }}
-            >
-              {lead.bookingDate} · {lead.bookingTime}
-            </span>
+    <motion.div
+      layout
+      className="bg-white rounded-2xl overflow-hidden shadow-sm transition-all border border-gray-100"
+    >
+      {/* Dark teal booking header — only when booked */}
+      {hasBooking && (
+        <div className="bg-[#0D5C55] px-4 py-2.5 flex items-center gap-2">
+          <Calendar className="w-3.5 h-3.5 text-white/70 flex-shrink-0" />
+          <span
+            className="text-white text-sm font-semibold"
+            style={{ fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.02em" }}
+          >
+            {lead.bookingDate} · {lead.bookingTime}
+          </span>
+        </div>
+      )}
+
+      {/* Card body */}
+      <div className="px-4 py-4">
+        {/* Top row: avatar + name/status + date */}
+        <div className="flex items-start gap-3">
+          {/* Avatar */}
+          <div className="w-9 h-9 rounded-full bg-[#0D5C55]/10 flex items-center justify-center flex-shrink-0">
+            <User className="w-4 h-4 text-[#0D5C55]" />
           </div>
-        )}
 
-        {/* Card body */}
-        <div className="px-4 py-4">
-          {/* Top row: checkbox + avatar + name/status + date/delete */}
-          <div className="flex items-start gap-3">
-            {/* Checkbox */}
-            <button
-              onClick={() => onToggleSelect(lead.id)}
-              className="mt-0.5 flex-shrink-0 text-gray-300 hover:text-[#0D9E8F] transition-colors"
-            >
-              {selected
-                ? <CheckSquare className="w-5 h-5 text-[#0D9E8F]" />
-                : <Square className="w-5 h-5" />}
-            </button>
-
-            {/* Avatar */}
-            <div className="w-9 h-9 rounded-full bg-[#0D5C55]/10 flex items-center justify-center flex-shrink-0">
-              <User className="w-4 h-4 text-[#0D5C55]" />
+          {/* Name + status + contact */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="font-bold text-gray-800 text-sm">{lead.name}</p>
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700 border border-green-200">
+                <CheckCircle className="w-3 h-3" /> Ready
+              </span>
+              {!hasBooking && (
+                <span className="text-xs text-gray-400 font-medium">No booking</span>
+              )}
             </div>
-
-            {/* Name + status + contact */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <p className="font-bold text-gray-800 text-sm">{lead.name}</p>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700 border border-green-200">
-                  <CheckCircle className="w-3 h-3" /> Ready
-                </span>
-                {!hasBooking && (
-                  <span className="text-xs text-gray-400 font-medium">No booking</span>
-                )}
-              </div>
-              <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1">
-                <span className="flex items-center gap-1 text-xs text-gray-500">
-                  <Phone className="w-3 h-3 text-gray-400" /> {lead.phone}
-                </span>
-                <span className="flex items-center gap-1 text-xs text-gray-500">
-                  <Mail className="w-3 h-3 text-gray-400" /> {lead.email}
-                </span>
-              </div>
-            </div>
-
-            {/* Date + delete */}
-            <div className="flex flex-col items-end gap-2 flex-shrink-0">
-              <p className="text-xs text-gray-300">
-                {createdAt.toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}
-              </p>
-              <button
-                onClick={() => setConfirmDelete(true)}
-                className="p-1 rounded-lg hover:bg-red-50 text-gray-300 hover:text-red-400 transition-colors"
-                title="Delete lead"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+            <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1">
+              <span className="flex items-center gap-1 text-xs text-gray-500">
+                <Phone className="w-3 h-3 text-gray-400" /> {lead.phone}
+              </span>
+              <span className="flex items-center gap-1 text-xs text-gray-500">
+                <Mail className="w-3 h-3 text-gray-400" /> {lead.email}
+              </span>
             </div>
           </div>
 
-          {/* 4-field grid */}
-          <div className="grid grid-cols-2 gap-x-6 gap-y-3 mt-4 pl-12">
-            <div>
-              <p className="text-[10px] font-semibold tracking-widest uppercase text-gray-400 mb-0.5">SMSF</p>
-              <p className="text-sm text-gray-700 font-medium">
-                {lead.hasSmsf === "yes" ? "Yes" : lead.hasSmsf === "no" ? "No" : "—"}
-              </p>
-            </div>
-            <div>
-              <p className="text-[10px] font-semibold tracking-widest uppercase text-gray-400 mb-0.5">Owns Property</p>
-              <p className="text-sm text-gray-700 font-medium">
-                {lead.ownsProperty === "yes" ? "Yes" : lead.ownsProperty === "no" ? "No" : "—"}
-              </p>
-            </div>
-            <div>
-              <p className="text-[10px] font-semibold tracking-widest uppercase text-gray-400 mb-0.5">Timeline</p>
-              <p className="text-sm text-gray-700 font-medium">{lead.timeline || "—"}</p>
-            </div>
-            <div>
-              <p className="text-[10px] font-semibold tracking-widest uppercase text-gray-400 mb-0.5">Booking</p>
-              <p className="text-sm text-gray-700 font-medium">
-                {hasBooking ? `${lead.bookingDate} · ${lead.bookingTime}` : "No booking"}
-              </p>
-            </div>
+          {/* Date */}
+          <div className="flex flex-col items-end gap-2 flex-shrink-0">
+            <p className="text-xs text-gray-300">
+              {createdAt.toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}
+            </p>
           </div>
         </div>
-      </motion.div>
 
-      {/* Delete confirmation modal */}
-      <AnimatePresence>
-        {confirmDelete && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
-            onClick={() => setConfirmDelete(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
-                  <Trash2 className="w-5 h-5 text-red-500" />
-                </div>
-                <div>
-                  <p className="font-bold text-gray-800">Delete Lead?</p>
-                  <p className="text-xs text-gray-400">{lead.name} — {lead.email}</p>
-                </div>
-              </div>
-              <p className="text-sm text-gray-500 mb-5">
-                This will permanently delete this lead. This cannot be undone.
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setConfirmDelete(false)}
-                  className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => deleteMutation.mutate({ leadId: lead.id })}
-                  disabled={deleteMutation.isPending}
-                  className="flex-1 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-sm font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {deleteMutation.isPending
-                    ? <Loader2 className="w-4 h-4 animate-spin" />
-                    : <Trash2 className="w-4 h-4" />}
-                  Delete
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </>
+        {/* 4-field grid */}
+        <div className="grid grid-cols-2 gap-x-6 gap-y-3 mt-4 pl-12">
+          <div>
+            <p className="text-[10px] font-semibold tracking-widest uppercase text-gray-400 mb-0.5">SMSF</p>
+            <p className="text-sm text-gray-700 font-medium">
+              {lead.hasSmsf === "yes" ? "Yes" : lead.hasSmsf === "no" ? "No" : "—"}
+            </p>
+          </div>
+          <div>
+            <p className="text-[10px] font-semibold tracking-widest uppercase text-gray-400 mb-0.5">Owns Property</p>
+            <p className="text-sm text-gray-700 font-medium">
+              {lead.ownsProperty === "yes" ? "Yes" : lead.ownsProperty === "no" ? "No" : "—"}
+            </p>
+          </div>
+          <div>
+            <p className="text-[10px] font-semibold tracking-widest uppercase text-gray-400 mb-0.5">Timeline</p>
+            <p className="text-sm text-gray-700 font-medium">{lead.timeline || "—"}</p>
+          </div>
+          <div>
+            <p className="text-[10px] font-semibold tracking-widest uppercase text-gray-400 mb-0.5">Booking</p>
+            <p className="text-sm text-gray-700 font-medium">
+              {hasBooking ? `${lead.bookingDate} · ${lead.bookingTime}` : "No booking"}
+            </p>
+          </div>
+        </div>
+      </div>
+    </motion.div>
   );
 }
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function BrokerAdmin() {
-  const utils = trpc.useUtils();
   const { data: leads, isLoading, error } = trpc.survey.getAllLeads.useQuery();
-  const [selected, setSelected] = useState<Set<number>>(new Set());
-  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
-  const deleteLeadMutation = trpc.survey.deleteLead.useMutation();
-
-  const allIds = leads?.map(l => l.id) ?? [];
-  const allSelected = allIds.length > 0 && allIds.every(id => selected.has(id));
-  const someSelected = selected.size > 0;
 
   const bookedLeads = leads?.filter(l => !!l.bookingDate) ?? [];
   const unbookedLeads = leads?.filter(l => !l.bookingDate) ?? [];
-
-  const toggleSelect = (id: number) => {
-    setSelected(prev => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  };
-
-  const toggleSelectAll = () => {
-    if (allSelected) {
-      setSelected(new Set());
-    } else {
-      setSelected(new Set(allIds));
-    }
-  };
-
-  const handleDeleted = (id: number) => {
-    setSelected(prev => { const next = new Set(prev); next.delete(id); return next; });
-    utils.survey.getAllLeads.invalidate();
-  };
-
-  const handleBulkDelete = async () => {
-    const ids = Array.from(selected);
-    await Promise.all(ids.map(id => deleteLeadMutation.mutateAsync({ leadId: id })));
-    setSelected(new Set());
-    setConfirmBulkDelete(false);
-    utils.survey.getAllLeads.invalidate();
-  };
 
   return (
     <div className="min-h-screen bg-[#F0F0EE]">
@@ -623,7 +498,7 @@ export default function BrokerAdmin() {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-8">
-        {/* Title + stats + bulk actions */}
+        {/* Title + stats */}
         <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
           <div>
             <h1
@@ -639,26 +514,6 @@ export default function BrokerAdmin() {
 
           <div className="flex items-center gap-3 flex-wrap">
             {leads && leads.length > 0 && (
-              <button
-                onClick={toggleSelectAll}
-                className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-[#0D5C55] transition-colors px-3 py-2 rounded-lg border border-gray-200 bg-white hover:border-[#0D5C55]"
-              >
-                {allSelected
-                  ? <CheckSquare className="w-4 h-4 text-[#0D9E8F]" />
-                  : <Square className="w-4 h-4" />}
-                {allSelected ? "Deselect All" : "Select All"}
-              </button>
-            )}
-            {someSelected && (
-              <button
-                onClick={() => setConfirmBulkDelete(true)}
-                className="flex items-center gap-1.5 text-xs font-semibold text-white bg-red-500 hover:bg-red-600 transition-colors px-3 py-2 rounded-lg"
-              >
-                <Trash2 className="w-4 h-4" />
-                Delete {selected.size} selected
-              </button>
-            )}
-            {leads && leads.length > 0 && !someSelected && (
               <div className="flex gap-3 text-xs">
                 <span className="flex items-center gap-1 text-green-600 font-medium">
                   <CheckCircle className="w-3.5 h-3.5" />
@@ -707,13 +562,7 @@ export default function BrokerAdmin() {
             </p>
             <div className="space-y-3">
               {bookedLeads.map(lead => (
-                <LeadCard
-                  key={lead.id}
-                  lead={lead}
-                  selected={selected.has(lead.id)}
-                  onToggleSelect={toggleSelect}
-                  onDeleted={handleDeleted}
-                />
+                <LeadCard key={lead.id} lead={lead} />
               ))}
             </div>
           </div>
@@ -730,70 +579,12 @@ export default function BrokerAdmin() {
             </p>
             <div className="space-y-3">
               {unbookedLeads.map(lead => (
-                <LeadCard
-                  key={lead.id}
-                  lead={lead}
-                  selected={selected.has(lead.id)}
-                  onToggleSelect={toggleSelect}
-                  onDeleted={handleDeleted}
-                />
+                <LeadCard key={lead.id} lead={lead} />
               ))}
             </div>
           </div>
         )}
       </main>
-
-      {/* Bulk delete confirmation modal */}
-      <AnimatePresence>
-        {confirmBulkDelete && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
-            onClick={() => setConfirmBulkDelete(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
-                  <Trash2 className="w-5 h-5 text-red-500" />
-                </div>
-                <div>
-                  <p className="font-bold text-gray-800">Delete {selected.size} Leads?</p>
-                  <p className="text-xs text-gray-400">This cannot be undone.</p>
-                </div>
-              </div>
-              <p className="text-sm text-gray-500 mb-5">
-                You are about to permanently delete {selected.size} lead{selected.size > 1 ? "s" : ""}. This cannot be undone.
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setConfirmBulkDelete(false)}
-                  className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleBulkDelete}
-                  disabled={deleteLeadMutation.isPending}
-                  className="flex-1 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-sm font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {deleteLeadMutation.isPending
-                    ? <Loader2 className="w-4 h-4 animate-spin" />
-                    : <Trash2 className="w-4 h-4" />}
-                  Delete All
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
