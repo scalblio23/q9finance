@@ -870,22 +870,27 @@ function StepBooking({
             <div className="pl-8 grid grid-cols-2 gap-2">
               {TIME_SLOTS.map(slot => {
                 const isSelected = form.bookingTime === slot;
-                if (isTimeSlotBlocked(form.bookingDate, slot)) return null;
+                const blocked = isTimeSlotBlocked(form.bookingDate, slot);
                 return (
                   <motion.button
                     key={slot}
-                    onClick={() => handleTimeSelect(slot)}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+                    onClick={() => { if (!blocked) handleTimeSelect(slot); }}
+                    disabled={blocked}
+                    whileHover={blocked ? undefined : { scale: 1.02 }}
+                    whileTap={blocked ? undefined : { scale: 0.98 }}
                     className={`px-4 py-3 rounded-xl border-2 text-sm font-medium text-left transition-all duration-200
-                      ${isSelected
+                      ${blocked
+                        ? "border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed"
+                        : isSelected
                         ? "border-[#0D5C55] bg-[#0D5C55]/5 text-[#0D5C55]"
                         : "border-gray-100 bg-white text-gray-600 hover:border-gray-200"
                       }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span>{slot}</span>
-                      {isSelected && <Check className="w-3.5 h-3.5 text-[#0D5C55]" strokeWidth={2.5} />}
+                      {blocked
+                        ? <span className="line-through">Unavailable</span>
+                        : <span>{slot}</span>}
+                      {isSelected && !blocked && <Check className="w-3.5 h-3.5 text-[#0D5C55]" strokeWidth={2.5} />}
                     </div>
                   </motion.button>
                 );
