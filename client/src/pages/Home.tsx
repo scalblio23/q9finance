@@ -1116,7 +1116,7 @@ function StepBooking({
           className={`flex-1 flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl font-bold tracking-wide transition-all duration-200
             ${canSubmit && !isSubmitting
               ? "bg-[#0D9E8F] text-white shadow-lg shadow-teal-200"
-              : "bg-gray-100 text-gray-300 cursor-not-allowed"
+              : "bg-[#0D9E8F]/40 text-white cursor-not-allowed"
             }`}
           style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, letterSpacing: "0.05em", fontSize: "1rem" }}
         >

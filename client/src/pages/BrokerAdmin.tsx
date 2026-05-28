@@ -599,7 +599,7 @@ export default function BrokerAdmin() {
       <header className="bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <img
-            src="https://d2xsxph8kpxj0f.cloudfront.net/310519663412142004/MqkHRp8irWn8dMYsECtkoh/finchecker-logo-transparent_e7a5e4b3.png"
+            src="https://d2xsxph8kpxj0f.cloudfront.net/310519663412142004/MqkHRp8irWn8dMYsECtkoh/finchecker-logo-nobg_fd93207b.png"
             alt="Finchecker"
             className="h-8"
           />
@@ -641,17 +641,17 @@ export default function BrokerAdmin() {
           </div>
         )}
 
+        {/* Booking Calendar — always shown once loaded; slot-blocking works with zero leads */}
+        {leads && (
+          <BookingCalendar leads={leads} />
+        )}
+
         {/* Empty — no leads at all */}
         {leads && leads.length === 0 && (
           <div className="text-center py-20">
             <FileText className="w-10 h-10 text-gray-200 mx-auto mb-3" />
             <p className="text-gray-400 text-sm">No leads yet. Share the survey to start receiving enquiries.</p>
           </div>
-        )}
-
-        {/* Booking Calendar */}
-        {leads && leads.length > 0 && (
-          <BookingCalendar leads={leads} />
         )}
 
         {/* Search + filter chips */}
