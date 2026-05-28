@@ -150,9 +150,18 @@ function vitePluginManusDebugCollector(): Plugin {
   };
 }
 
-const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector()];
+export default defineConfig(({ command }) => {
+  // The Manus editor runtime + jsx-loc instrumentation are dev-only tools.
+  // Shipping them inlines ~340kB of blocking JS into index.html — keep them out of production.
+  const isDev = command === "serve";
+  const plugins = [
+    react(),
+    tailwindcss(),
+    ...(isDev ? [jsxLocPlugin(), vitePluginManusRuntime()] : []),
+    vitePluginManusDebugCollector(),
+  ];
 
-export default defineConfig({
+  return {
   plugins,
   resolve: {
     alias: {
@@ -184,4 +193,5 @@ export default defineConfig({
       deny: ["**/.*"],
     },
   },
+  };
 });

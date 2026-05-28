@@ -301,6 +301,8 @@ function BrandHeader() {
       <img
         src="https://d2xsxph8kpxj0f.cloudfront.net/310519663412142004/MqkHRp8irWn8dMYsECtkoh/finchecker-logo-nobg_fd93207b.png"
         alt="Finchecker"
+        decoding="async"
+        height={44}
         className="h-11 w-auto object-contain"
       />
     </header>
@@ -328,7 +330,7 @@ function ComplianceFooter() {
         <p className="text-[10px] font-semibold tracking-widest uppercase text-gray-400 text-center mb-4">Lenders We Compare</p>
         <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 mb-6">
           {TRUST_BANK_LOGOS.map(b => (
-            <img key={b.name} src={b.logo} alt={b.name} className="h-6 w-auto object-contain opacity-50 grayscale hover:opacity-80 hover:grayscale-0 transition-all duration-200" />
+            <img key={b.name} src={b.logo} alt={b.name} loading="lazy" decoding="async" height={24} className="h-6 w-auto object-contain opacity-50 grayscale hover:opacity-80 hover:grayscale-0 transition-all duration-200" />
           ))}
         </div>
         <div className="border-t border-gray-100 pt-4 space-y-2">
@@ -786,7 +788,10 @@ function StepBooking({
 }) {
   // Fetch blocked slots from admin calendar
   const { data: blockedData } = trpc.blockedSlots.getAll.useQuery();
-  const blockedSet = new Set((blockedData ?? []).map(b => b.slotKey));
+  const blockedSet = useMemo(
+    () => new Set((blockedData ?? []).map(b => b.slotKey)),
+    [blockedData]
+  );
 
   const slotKeyForDateHour = (d: Date, hour: number) => {
     const dd = String(d.getDate()).padStart(2, "0");
